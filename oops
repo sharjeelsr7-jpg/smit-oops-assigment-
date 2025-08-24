@@ -1,0 +1,76 @@
+import csv
+from datetime import datetime as dt
+
+products = [
+    ["id","name","price"],
+    [1,"Laptop",1200],
+    [2,"Phone",800],
+    [3,"Headphones",150],
+    [4,"Mouse",40],
+    [5,"Keyboard",60]
+]
+
+with open("product.csv","w") as file:
+  writer = csv.writer(file)
+  writer.writerows(products)
+
+class logger:
+  log_file = "log.txt"
+  @classmethod
+  def log(cls, message):
+    timestamp = dt.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(cls.log_file, "a", encoding="utf-8") as f:
+           f.write(f"[{timestamp}] {message}\n")
+
+def log_action(func):
+    def wrapper(*args, **kwargs):
+        logger.log(f"Executed {func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
+
+class order:
+  discount_rate = 0
+  def __init__(self):
+    self.order = []
+
+  @log_action
+  def add_item_by_id(self,id ,quantity):
+    with open("product.csv","r") as file:
+      reader = csv.DictReader(file)
+      product = None
+      for row in reader:
+        if int(row["id"]) == id:
+          product = row
+          break
+    if product:
+      price = int(product["price"])
+      total_price = price * quantity
+      self.order.append([product["name"],price,quantity])
+      logger.log(f"Added item: {product['name']}")
+    else:
+      logger.log(f"Invalid product ID attempt: {id}")
+
+  @log_action
+  def calculate_total(self):
+    total = sum(price * qty for _, price, qty in self.order)
+    if self.discount_rate > 0:
+      total = total - (total * self.discount_rate/100)
+    logger.log(f"calculated total with dicsount: {total}")
+    return total
+
+  @classmethod
+  @log_action
+  def discount_rate(cls,discount_rate):
+    cls.discount_rate = discount_rate
+    logger.log(f"Discount rate set to: {discount_rate}")
+
+
+  @staticmethod
+  def is_product_valid(id):
+    with open("product.csv","r") as file:
+      reader = csv.DictReader(file)
+      for row in reader:
+        if int(row["id"]) == id:
+          return True
+      logger.log(f"Invalid product ID attemot: {id}")
+      return False
